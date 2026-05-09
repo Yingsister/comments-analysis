@@ -152,21 +152,6 @@ OP_STYLE = """
         margin-top: 0.5rem;
     }
     
-    .chart-card {
-        background: var(--bg-card);
-        border-radius: 12px;
-        padding: 1.25rem;
-        border: 1px solid var(--border-color);
-        margin-bottom: 1.25rem;
-    }
-    
-    .chart-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 1rem;
-    }
-    
     .upload-box {
         border: 2px dashed var(--border-color);
         border-radius: 12px;
@@ -353,6 +338,12 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<div style="margin-bottom: 0.75rem; font-size: 15px; color: #94A3B8; text-align: center;">
+    支持 .xlsx 和 .xls 格式，上传后将自动生成差评分析看板
+</div>
+""", unsafe_allow_html=True)
+
 uploaded_file = st.file_uploader("上传评价数据", type=["xlsx", "xls"], label_visibility="collapsed")
 
 if uploaded_file is not None:
@@ -374,14 +365,13 @@ if uploaded_file is not None:
         df['评价月份'] = df['评价时间'].dt.month
         
         # 星级范围筛选
-        st.markdown('<div class="chart-card" style="margin-bottom: 1.5rem;">', unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">筛选条件</div>', unsafe_allow_html=True)
-        col_filter1, col_filter2 = st.columns([3, 1])
-        with col_filter1:
-            star_range = st.slider("星级范围", min_value=0, max_value=5, value=(0, 5), step=1)
-        with col_filter2:
-            st.markdown(f'<div style="padding-top: 0.5rem; font-size: 13px; color: #94A3B8;">筛选前数据: {len(df):,} 条</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">筛选条件</p>', unsafe_allow_html=True)
+            col_filter1, col_filter2 = st.columns([3, 1])
+            with col_filter1:
+                star_range = st.slider("星级范围", min_value=0, max_value=5, value=(0, 5), step=1)
+            with col_filter2:
+                st.markdown(f'<div style="padding-top: 0.5rem; font-size: 13px; color: #94A3B8;">筛选前数据: {len(df):,} 条</div>', unsafe_allow_html=True)
         
         # 应用星级筛选
         df = df[(df['星级分'] >= star_range[0]) & (df['星级分'] <= star_range[1])]
@@ -495,48 +485,46 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">评价等级分布</div>', unsafe_allow_html=True)
-            eval_dist = pd.Series({'差评': len(bad_reviews), '中性': len(neutral_reviews), '好评': len(good_reviews)})
-            fig = px.pie(
-                values=eval_dist.values, 
-                names=eval_dist.index,
-                color=eval_dist.index,
-                color_discrete_map={'差评': '#EF4444', '中性': '#F59E0B', '好评': '#10B981'},
-                hole=0.6
-            )
-            fig.update_layout(**make_plotly_theme(), height=280, showlegend=True)
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">评价等级分布</p>', unsafe_allow_html=True)
+                eval_dist = pd.Series({'差评（0-2星）': len(bad_reviews), '中性（3星）': len(neutral_reviews), '好评（4-5星）': len(good_reviews)})
+                fig = px.pie(
+                    values=eval_dist.values, 
+                    names=eval_dist.index,
+                    color=eval_dist.index,
+                    color_discrete_map={'差评（0-2星）': '#EF4444', '中性（3星）': '#F59E0B', '好评（4-5星）': '#10B981'},
+                    hole=0.6
+                )
+                fig.update_layout(**make_plotly_theme(), height=280, showlegend=True)
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         with col2:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">各平台差评率对比</div>', unsafe_allow_html=True)
-            fig = px.bar(
-                x=platform_bad_rate.index, 
-                y=platform_bad_rate.values,
-                color=platform_bad_rate.values,
-                color_continuous_scale=['#10B981', '#F59E0B', '#EF4444'],
-                title=''
-            )
-            fig.update_layout(
-                **make_plotly_theme(), 
-                height=280,
-                xaxis_title='平台',
-                yaxis_title='差评率(%)',
-                coloraxis_showscale=False,
-                showlegend=False
-            )
-            for i, v in enumerate(platform_bad_rate.values):
-                fig.add_annotation(
-                    x=i, y=v,
-                    text=f'{v}%',
-                    showarrow=False,
-                    font=dict(color='#F1F5F9', size=14, weight='bold'),
-                    yshift=10
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">各平台差评率对比</p>', unsafe_allow_html=True)
+                fig = px.bar(
+                    x=platform_bad_rate.index, 
+                    y=platform_bad_rate.values,
+                    color=platform_bad_rate.values,
+                    color_continuous_scale=['#10B981', '#F59E0B', '#EF4444'],
+                    title=''
                 )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                fig.update_layout(
+                    **make_plotly_theme(), 
+                    height=280,
+                    xaxis_title='平台',
+                    yaxis_title='差评率(%)',
+                    coloraxis_showscale=False,
+                    showlegend=False
+                )
+                for i, v in enumerate(platform_bad_rate.values):
+                    fig.add_annotation(
+                        x=i, y=v,
+                        text=f'{v}%',
+                        showarrow=False,
+                        font=dict(color='#F1F5F9', size=14, weight='bold'),
+                        yshift=10
+                    )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         st.markdown("""
         <div class="section-header">
@@ -548,54 +536,52 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">差评星级分布</div>', unsafe_allow_html=True)
-            star_dist = bad_reviews['星级分'].value_counts().sort_index()
-            fig = px.bar(
-                x=star_dist.index.astype(str), 
-                y=star_dist.values,
-                color=star_dist.values,
-                color_continuous_scale=['#F59E0B', '#EF4444'],
-                title=''
-            )
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=280,
-                xaxis_title='星级',
-                yaxis_title='差评数量',
-                coloraxis_showscale=False,
-                showlegend=False
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评星级分布</p>', unsafe_allow_html=True)
+                star_dist = bad_reviews['星级分'].value_counts().sort_index()
+                fig = px.bar(
+                    x=star_dist.index.astype(str), 
+                    y=star_dist.values,
+                    color=star_dist.values,
+                    color_continuous_scale=['#F59E0B', '#EF4444'],
+                    title=''
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=280,
+                    xaxis_title='星级',
+                    yaxis_title='差评数量',
+                    coloraxis_showscale=False,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         with col2:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">差评各项评分均值</div>', unsafe_allow_html=True)
-            fig = px.bar(
-                x=bad_avg_scores.index, 
-                y=bad_avg_scores.values,
-                color=['#EF4444', '#F97316', '#F59E0B'],
-                title=''
-            )
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=280,
-                xaxis_title='评分维度',
-                yaxis_title='平均分',
-                yaxis_range=[0, 3],
-                showlegend=False
-            )
-            for i, (dim, val) in enumerate(bad_avg_scores.items()):
-                fig.add_annotation(
-                    x=i, y=val,
-                    text=str(val),
-                    showarrow=False,
-                    font=dict(color='#F1F5F9', size=14, weight='bold'),
-                    yshift=10
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评各项评分均值</p>', unsafe_allow_html=True)
+                fig = px.bar(
+                    x=bad_avg_scores.index, 
+                    y=bad_avg_scores.values,
+                    color=['#EF4444', '#F97316', '#F59E0B'],
+                    title=''
                 )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=280,
+                    xaxis_title='评分维度',
+                    yaxis_title='平均分',
+                    yaxis_range=[0, 3],
+                    showlegend=False
+                )
+                for i, (dim, val) in enumerate(bad_avg_scores.items()):
+                    fig.add_annotation(
+                        x=i, y=val,
+                        text=str(val),
+                        showarrow=False,
+                        font=dict(color='#F1F5F9', size=14, weight='bold'),
+                        yshift=10
+                    )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         st.markdown("""
         <div class="section-header">
@@ -615,91 +601,88 @@ if uploaded_file is not None:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">菜品负面标签TOP10</div>', unsafe_allow_html=True)
-            if '菜品标签' in df.columns:
-                bad_dish_tags = bad_reviews['菜品标签'].dropna().str.split(',').explode()
-                bad_dish_tags = filter_negative_tags(bad_dish_tags)
-                bad_dish_tags = bad_dish_tags.value_counts().head(10)
-                if len(bad_dish_tags) > 0:
-                    fig = px.bar(
-                        x=bad_dish_tags.values, 
-                        y=bad_dish_tags.index, 
-                        orientation='h',
-                        color=bad_dish_tags.values,
-                        color_continuous_scale=['#EF4444', '#F97316']
-                    )
-                    fig.update_layout(
-                        **make_plotly_theme(),
-                        height=320,
-                        xaxis_title='出现次数',
-                        coloraxis_showscale=False,
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">菜品负面标签TOP10</p>', unsafe_allow_html=True)
+                if '菜品标签' in df.columns:
+                    bad_dish_tags = bad_reviews['菜品标签'].dropna().str.split(',').explode()
+                    bad_dish_tags = filter_negative_tags(bad_dish_tags)
+                    bad_dish_tags = bad_dish_tags.value_counts().head(10)
+                    if len(bad_dish_tags) > 0:
+                        fig = px.bar(
+                            x=bad_dish_tags.values, 
+                            y=bad_dish_tags.index, 
+                            orientation='h',
+                            color=bad_dish_tags.values,
+                            color_continuous_scale=['#EF4444', '#F97316']
+                        )
+                        fig.update_layout(
+                            **make_plotly_theme(),
+                            height=320,
+                            xaxis_title='出现次数',
+                            coloraxis_showscale=False,
+                            showlegend=False
+                        )
+                        st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+                    else:
+                        st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无数据</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无数据</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少菜品标签列</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少菜品标签列</div>', unsafe_allow_html=True)
         
         with col2:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">服务负面标签TOP10</div>', unsafe_allow_html=True)
-            if '服务标签' in df.columns:
-                bad_service_tags = bad_reviews['服务标签'].dropna().str.split(',').explode()
-                bad_service_tags = filter_negative_tags(bad_service_tags)
-                bad_service_tags = bad_service_tags.value_counts().head(10)
-                if len(bad_service_tags) > 0:
-                    fig = px.bar(
-                        x=bad_service_tags.values, 
-                        y=bad_service_tags.index, 
-                        orientation='h',
-                        color=bad_service_tags.values,
-                        color_continuous_scale=['#F97316', '#F59E0B']
-                    )
-                    fig.update_layout(
-                        **make_plotly_theme(),
-                        height=320,
-                        xaxis_title='出现次数',
-                        coloraxis_showscale=False,
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">服务负面标签TOP10</p>', unsafe_allow_html=True)
+                if '服务标签' in df.columns:
+                    bad_service_tags = bad_reviews['服务标签'].dropna().str.split(',').explode()
+                    bad_service_tags = filter_negative_tags(bad_service_tags)
+                    bad_service_tags = bad_service_tags.value_counts().head(10)
+                    if len(bad_service_tags) > 0:
+                        fig = px.bar(
+                            x=bad_service_tags.values, 
+                            y=bad_service_tags.index, 
+                            orientation='h',
+                            color=bad_service_tags.values,
+                            color_continuous_scale=['#F97316', '#F59E0B']
+                        )
+                        fig.update_layout(
+                            **make_plotly_theme(),
+                            height=320,
+                            xaxis_title='出现次数',
+                            coloraxis_showscale=False,
+                            showlegend=False
+                        )
+                        st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+                    else:
+                        st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无数据</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无数据</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少服务标签列</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少服务标签列</div>', unsafe_allow_html=True)
         
         with col3:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">环境负面标签TOP10</div>', unsafe_allow_html=True)
-            if '环境标签' in df.columns:
-                bad_env_tags = bad_reviews['环境标签'].dropna().str.split(',').explode()
-                bad_env_tags = filter_negative_tags(bad_env_tags)
-                bad_env_tags = bad_env_tags.value_counts().head(10)
-                if len(bad_env_tags) > 0:
-                    fig = px.bar(
-                        x=bad_env_tags.values, 
-                        y=bad_env_tags.index, 
-                        orientation='h',
-                        color=bad_env_tags.values,
-                        color_continuous_scale=['#F59E0B', '#EF4444']
-                    )
-                    fig.update_layout(
-                        **make_plotly_theme(),
-                        height=320,
-                        xaxis_title='出现次数',
-                        coloraxis_showscale=False,
-                        showlegend=False
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">环境负面标签TOP10</p>', unsafe_allow_html=True)
+                if '环境标签' in df.columns:
+                    bad_env_tags = bad_reviews['环境标签'].dropna().str.split(',').explode()
+                    bad_env_tags = filter_negative_tags(bad_env_tags)
+                    bad_env_tags = bad_env_tags.value_counts().head(10)
+                    if len(bad_env_tags) > 0:
+                        fig = px.bar(
+                            x=bad_env_tags.values, 
+                            y=bad_env_tags.index, 
+                            orientation='h',
+                            color=bad_env_tags.values,
+                            color_continuous_scale=['#F59E0B', '#EF4444']
+                        )
+                        fig.update_layout(
+                            **make_plotly_theme(),
+                            height=320,
+                            xaxis_title='出现次数',
+                            coloraxis_showscale=False,
+                            showlegend=False
+                        )
+                        st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+                    else:
+                        st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无数据</div>', unsafe_allow_html=True)
                 else:
-                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无数据</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少环境标签列</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少环境标签列</div>', unsafe_allow_html=True)
         
         st.markdown("""
         <div class="section-header">
@@ -708,36 +691,36 @@ if uploaded_file is not None:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        if '评价详情' in df.columns:
-            bad_comments = ' '.join(bad_reviews['评价详情'].dropna().astype(str))
-            words = re.findall(r'[\u4e00-\u9fa5]{2,}', bad_comments)
-            words = [w for w in words if w not in POSITIVE_WORDS and w not in STOP_WORDS]
-            # 保留3字以上的关键短语，或2字有实际业务含义的词（已过滤停用词）
-            words = [w for w in words if len(w) >= 3 or len(w) == 2]
-            if words:
-                word_counts = pd.Series(words).value_counts().head(20)
-                fig = px.bar(
-                    x=word_counts.values, 
-                    y=word_counts.index, 
-                    orientation='h',
-                    color=word_counts.values,
-                    color_continuous_scale=['#EF4444', '#F59E0B']
-                )
-                fig.update_layout(
-                    **make_plotly_theme(),
-                    height=400,
-                    xaxis_title='出现次数',
-                    yaxis_autorange='reversed',
-                    coloraxis_showscale=False,
-                    showlegend=False
-                )
-                st.plotly_chart(fig, use_container_width=True)
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评关键词分析</p>', unsafe_allow_html=True)
+            if '评价详情' in df.columns:
+                bad_comments = ' '.join(bad_reviews['评价详情'].dropna().astype(str))
+                words = re.findall(r'[\u4e00-\u9fa5]{2,}', bad_comments)
+                words = [w for w in words if w not in POSITIVE_WORDS and w not in STOP_WORDS]
+                # 保留3字以上的关键短语，或2字有实际业务含义的词（已过滤停用词）
+                words = [w for w in words if len(w) >= 3 or len(w) == 2]
+                if words:
+                    word_counts = pd.Series(words).value_counts().head(20)
+                    fig = px.bar(
+                        x=word_counts.values, 
+                        y=word_counts.index, 
+                        orientation='h',
+                        color=word_counts.values,
+                        color_continuous_scale=['#EF4444', '#F59E0B']
+                    )
+                    fig.update_layout(
+                        **make_plotly_theme(),
+                        height=400,
+                        xaxis_title='出现次数',
+                        yaxis_autorange='reversed',
+                        coloraxis_showscale=False,
+                        showlegend=False
+                    )
+                    st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+                else:
+                    st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无有效负面关键词数据</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无有效负面关键词数据</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少评价详情列</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">缺少评价详情列</div>', unsafe_allow_html=True)
         
         st.markdown("""
         <div class="section-header">
@@ -749,74 +732,71 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">差评量TOP10省份</div>', unsafe_allow_html=True)
-            province_bad = bad_reviews['省份'].value_counts().head(10)
-            fig = px.bar(
-                x=province_bad.index, 
-                y=province_bad.values,
-                color=province_bad.values,
-                color_continuous_scale=['#EF4444', '#F97316']
-            )
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=300,
-                xaxis_title='省份',
-                yaxis_title='差评数量',
-                coloraxis_showscale=False,
-                showlegend=False
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评量TOP10省份</p>', unsafe_allow_html=True)
+                province_bad = bad_reviews['省份'].value_counts().head(10)
+                fig = px.bar(
+                    x=province_bad.index, 
+                    y=province_bad.values,
+                    color=province_bad.values,
+                    color_continuous_scale=['#EF4444', '#F97316']
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=300,
+                    xaxis_title='省份',
+                    yaxis_title='差评数量',
+                    coloraxis_showscale=False,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         with col2:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">差评量TOP10城市</div>', unsafe_allow_html=True)
-            city_bad = bad_reviews['城市'].value_counts().head(10)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评量TOP10城市</p>', unsafe_allow_html=True)
+                city_bad = bad_reviews['城市'].value_counts().head(10)
+                fig = px.bar(
+                    x=city_bad.values, 
+                    y=city_bad.index, 
+                    orientation='h',
+                    color=city_bad.values,
+                    color_continuous_scale=['#F97316', '#F59E0B']
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=300,
+                    xaxis_title='差评数量',
+                    coloraxis_showscale=False,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+        
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">各省份差评率TOP10</p>', unsafe_allow_html=True)
+            province_bad_rate = (bad_reviews['省份'].value_counts() / df['省份'].value_counts() * 100).round(1).dropna().sort_values(ascending=False).head(10)
             fig = px.bar(
-                x=city_bad.values, 
-                y=city_bad.index, 
-                orientation='h',
-                color=city_bad.values,
-                color_continuous_scale=['#F97316', '#F59E0B']
+                x=province_bad_rate.index, 
+                y=province_bad_rate.values,
+                color=province_bad_rate.values,
+                color_continuous_scale=['#10B981', '#F59E0B', '#EF4444']
             )
             fig.update_layout(
                 **make_plotly_theme(),
-                height=300,
-                xaxis_title='差评数量',
+                height=280,
+                xaxis_title='省份',
+                yaxis_title='差评率(%)',
                 coloraxis_showscale=False,
                 showlegend=False
             )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">各省份差评率TOP10</div>', unsafe_allow_html=True)
-        province_bad_rate = (bad_reviews['省份'].value_counts() / df['省份'].value_counts() * 100).round(1).dropna().sort_values(ascending=False).head(10)
-        fig = px.bar(
-            x=province_bad_rate.index, 
-            y=province_bad_rate.values,
-            color=province_bad_rate.values,
-            color_continuous_scale=['#10B981', '#F59E0B', '#EF4444']
-        )
-        fig.update_layout(
-            **make_plotly_theme(),
-            height=280,
-            xaxis_title='省份',
-            yaxis_title='差评率(%)',
-            coloraxis_showscale=False,
-            showlegend=False
-        )
-        for i, v in enumerate(province_bad_rate.values):
-            fig.add_annotation(
-                x=i, y=v,
-                text=f'{v}%',
-                showarrow=False,
-                font=dict(color='#F1F5F9', size=12, weight='bold'),
-                yshift=10
-            )
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            for i, v in enumerate(province_bad_rate.values):
+                fig.add_annotation(
+                    x=i, y=v,
+                    text=f'{v}%',
+                    showarrow=False,
+                    font=dict(color='#F1F5F9', size=12, weight='bold'),
+                    yshift=10
+                )
+            st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         st.markdown("""
         <div class="section-header">
@@ -828,40 +808,38 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">每日差评数量趋势</div>', unsafe_allow_html=True)
-            daily_bad = bad_reviews.groupby('评价日期')['评价ID'].count()
-            fig = px.line(
-                daily_bad,
-                color_discrete_sequence=['#EF4444']
-            )
-            fig.update_traces(fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.1)')
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=280,
-                xaxis_title='日期',
-                yaxis_title='差评数量'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">每日差评数量趋势</p>', unsafe_allow_html=True)
+                daily_bad = bad_reviews.groupby('评价日期')['评价ID'].count()
+                fig = px.line(
+                    daily_bad,
+                    color_discrete_sequence=['#EF4444']
+                )
+                fig.update_traces(fill='tozeroy', fillcolor='rgba(239, 68, 68, 0.1)')
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=280,
+                    xaxis_title='日期',
+                    yaxis_title='差评数量'
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         with col2:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">各时段差评分布</div>', unsafe_allow_html=True)
-            hourly_bad = bad_reviews.groupby('评价小时')['评价ID'].count()
-            fig = px.line(
-                hourly_bad,
-                color_discrete_sequence=['#F97316'],
-                markers=True
-            )
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=280,
-                xaxis_title='小时',
-                yaxis_title='差评数量'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">各时段差评分布</p>', unsafe_allow_html=True)
+                hourly_bad = bad_reviews.groupby('评价小时')['评价ID'].count()
+                fig = px.line(
+                    hourly_bad,
+                    color_discrete_sequence=['#F97316'],
+                    markers=True
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=280,
+                    xaxis_title='小时',
+                    yaxis_title='差评数量'
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         month_names = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
         monthly_bad = bad_reviews.groupby('评价月份')['评价ID'].count()
@@ -869,22 +847,21 @@ if uploaded_file is not None:
         monthly_bad_rate = (monthly_bad / monthly_total * 100).round(1).fillna(0)
         monthly_bad_rate.index = monthly_bad_rate.index.map(lambda x: month_names[x])
         
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">月度差评率趋势</div>', unsafe_allow_html=True)
-        fig = px.line(
-            monthly_bad_rate,
-            markers=True,
-            color_discrete_sequence=['#F59E0B']
-        )
-        fig.update_traces(fill='tozeroy', fillcolor='rgba(245, 158, 11, 0.1)')
-        fig.update_layout(
-            **make_plotly_theme(),
-            height=280,
-            xaxis_title='月份',
-            yaxis_title='差评率(%)'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">月度差评率趋势</p>', unsafe_allow_html=True)
+            fig = px.line(
+                monthly_bad_rate,
+                markers=True,
+                color_discrete_sequence=['#F59E0B']
+            )
+            fig.update_traces(fill='tozeroy', fillcolor='rgba(245, 158, 11, 0.1)')
+            fig.update_layout(
+                **make_plotly_theme(),
+                height=280,
+                xaxis_title='月份',
+                yaxis_title='差评率(%)'
+            )
+            st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         st.markdown("""
         <div class="section-header">
@@ -896,67 +873,64 @@ if uploaded_file is not None:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">差评用户VIP分布</div>', unsafe_allow_html=True)
-            vip_bad = bad_reviews['是否vip'].value_counts()
-            fig = px.pie(
-                values=vip_bad.values, 
-                names=vip_bad.index,
-                color_discrete_sequence=['#EF4444', '#3B82F6']
-            )
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=280
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评用户VIP分布</p>', unsafe_allow_html=True)
+                vip_bad = bad_reviews['是否vip'].value_counts()
+                fig = px.pie(
+                    values=vip_bad.values, 
+                    names=vip_bad.index,
+                    color_discrete_sequence=['#EF4444', '#3B82F6']
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=280
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         with col2:
-            st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-            st.markdown('<div class="chart-title">差评用户等级分布</div>', unsafe_allow_html=True)
-            level_bad = bad_reviews['用户等级'].value_counts().sort_index()
+            with st.container():
+                st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">差评用户等级分布</p>', unsafe_allow_html=True)
+                level_bad = bad_reviews['用户等级'].value_counts().sort_index()
+                fig = px.bar(
+                    x=level_bad.index.astype(str), 
+                    y=level_bad.values,
+                    color=level_bad.values,
+                    color_continuous_scale=['#3B82F6', '#EF4444']
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=280,
+                    xaxis_title='用户等级',
+                    yaxis_title='差评数量',
+                    coloraxis_showscale=False,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+        
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">VIP与普通用户差评率对比</p>', unsafe_allow_html=True)
+            vip_bad_rate = (bad_reviews['是否vip'].value_counts() / df['是否vip'].value_counts() * 100).round(1).fillna(0)
             fig = px.bar(
-                x=level_bad.index.astype(str), 
-                y=level_bad.values,
-                color=level_bad.values,
-                color_continuous_scale=['#3B82F6', '#EF4444']
+                x=vip_bad_rate.index.astype(str), 
+                y=vip_bad_rate.values,
+                color=['#EF4444', '#3B82F6'][:len(vip_bad_rate)]
             )
             fig.update_layout(
                 **make_plotly_theme(),
                 height=280,
-                xaxis_title='用户等级',
-                yaxis_title='差评数量',
-                coloraxis_showscale=False,
+                xaxis_title='用户类型',
+                yaxis_title='差评率(%)',
                 showlegend=False
             )
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">VIP与普通用户差评率对比</div>', unsafe_allow_html=True)
-        vip_bad_rate = (bad_reviews['是否vip'].value_counts() / df['是否vip'].value_counts() * 100).round(1).fillna(0)
-        fig = px.bar(
-            x=vip_bad_rate.index.astype(str), 
-            y=vip_bad_rate.values,
-            color=['#EF4444', '#3B82F6'][:len(vip_bad_rate)]
-        )
-        fig.update_layout(
-            **make_plotly_theme(),
-            height=280,
-            xaxis_title='用户类型',
-            yaxis_title='差评率(%)',
-            showlegend=False
-        )
-        for i, v in enumerate(vip_bad_rate.values):
-            fig.add_annotation(
-                x=i, y=v,
-                text=f'{v}%',
-                showarrow=False,
-                font=dict(color='#F1F5F9', size=14, weight='bold'),
-                yshift=10
-            )
-        st.plotly_chart(fig, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            for i, v in enumerate(vip_bad_rate.values):
+                fig.add_annotation(
+                    x=i, y=v,
+                    text=f'{v}%',
+                    showarrow=False,
+                    font=dict(color='#F1F5F9', size=14, weight='bold'),
+                    yshift=10
+                )
+            st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
         
         st.markdown("""
         <div class="section-header">
@@ -992,28 +966,27 @@ if uploaded_file is not None:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">未回复差评城市分布TOP10</div>', unsafe_allow_html=True)
-        if len(unreplied_bad) > 0:
-            unreplied_city = unreplied_bad['城市'].value_counts().head(10)
-            fig = px.bar(
-                x=unreplied_city.values, 
-                y=unreplied_city.index, 
-                orientation='h',
-                color=unreplied_city.values,
-                color_continuous_scale=['#F59E0B', '#EF4444']
-            )
-            fig.update_layout(
-                **make_plotly_theme(),
-                height=320,
-                xaxis_title='未回复差评数',
-                coloraxis_showscale=False,
-                showlegend=False
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无未回复差评</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">未回复差评城市分布TOP10</p>', unsafe_allow_html=True)
+            if len(unreplied_bad) > 0:
+                unreplied_city = unreplied_bad['城市'].value_counts().head(10)
+                fig = px.bar(
+                    x=unreplied_city.values, 
+                    y=unreplied_city.index, 
+                    orientation='h',
+                    color=unreplied_city.values,
+                    color_continuous_scale=['#F59E0B', '#EF4444']
+                )
+                fig.update_layout(
+                    **make_plotly_theme(),
+                    height=320,
+                    xaxis_title='未回复差评数',
+                    coloraxis_showscale=False,
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=dict(displayModeBar=False))
+            else:
+                st.markdown('<div style="text-align:center; color: var(--text-muted); padding: 2rem;">暂无未回复差评</div>', unsafe_allow_html=True)
         
         # 门店差评排行榜
         st.markdown("""
@@ -1023,52 +996,55 @@ if uploaded_file is not None:
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-        st.markdown('<div class="chart-title">TOP15 门店差评率排行</div>', unsafe_allow_html=True)
-        
-        store_total = df.groupby('评价门店').size().reset_index(name='总评价数')
-        store_bad_count = bad_reviews.groupby('评价门店').size().reset_index(name='差评数')
-        store_unreplied_count = bad_reviews[bad_reviews['回复状态'] == '未回复'].groupby('评价门店').size().reset_index(name='未回复数')
-        
-        store_rank = store_total.merge(store_bad_count, on='评价门店', how='left').fillna(0)
-        store_rank = store_rank.merge(store_unreplied_count, on='评价门店', how='left').fillna(0)
-        store_rank['差评率'] = (store_rank['差评数'] / store_rank['总评价数'] * 100).round(1)
-        store_rank = store_rank.sort_values('差评率', ascending=False).head(15)
-        
-        def get_store_top_tags(store_name):
-            store_bad = bad_reviews[bad_reviews['评价门店'] == store_name]
-            tags = []
-            for col in ['菜品标签', '服务标签', '环境标签']:
-                if col in df.columns:
-                    t = store_bad[col].dropna().str.split(',').explode().str.strip()
-                    t = filter_negative_tags(t)
-                    tags.extend(t.tolist())
-            tag_counts = pd.Series(tags).value_counts().head(2)
-            return '、'.join(tag_counts.index) if len(tag_counts) > 0 else '-'
-        
-        store_rank['主要问题'] = store_rank['评价门店'].apply(get_store_top_tags)
-        store_rank = store_rank[['评价门店', '差评数', '差评率', '未回复数', '主要问题']]
-        store_rank.columns = ['门店名称', '差评数', '差评率(%)', '未回复数', '主要问题标签']
-        
-        def highlight_high_bad_rate(row):
-            if row['差评率(%)'] > 20:
-                return ['background-color: rgba(239, 68, 68, 0.15); color: #F1F5F9;'] * len(row)
-            return [''] * len(row)
-        
-        styled_store = store_rank.style.apply(highlight_high_bad_rate, axis=1).format({'差评率(%)': '{:.1f}'})
-        st.dataframe(styled_store, use_container_width=True)
-        
-        if (store_rank['差评率(%)'] > 20).any():
-            high_risk_count = (store_rank['差评率(%)'] > 20).sum()
-            st.markdown(f'<div style="margin-top: 0.5rem; font-size: 13px; color: #EF4444;">⚠️ 有 {high_risk_count} 家门店差评率超过20%，建议优先重点共识整改</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<p style="font-size: 16px; font-weight: 600; color: #F1F5F9; margin-bottom: 0.5rem;">TOP15 门店差评率排行</p>', unsafe_allow_html=True)
+            
+            store_total = df.groupby('评价门店').size().reset_index(name='总评价数')
+            store_bad_count = bad_reviews.groupby('评价门店').size().reset_index(name='差评数')
+            store_unreplied_count = bad_reviews[bad_reviews['回复状态'] == '未回复'].groupby('评价门店').size().reset_index(name='未回复数')
+            
+            store_rank = store_total.merge(store_bad_count, on='评价门店', how='left').fillna(0)
+            store_rank = store_rank.merge(store_unreplied_count, on='评价门店', how='left').fillna(0)
+            store_rank['差评数'] = store_rank['差评数'].astype(int)
+            store_rank['未回复数'] = store_rank['未回复数'].astype(int)
+            store_rank['差评率'] = (store_rank['差评数'] / store_rank['总评价数'] * 100).round(1)
+            store_rank = store_rank.sort_values('差评率', ascending=False).head(15).reset_index(drop=True)
+            store_rank.insert(0, '排名', range(1, len(store_rank) + 1))
+            
+            def get_store_top_tags(store_name):
+                store_bad = bad_reviews[bad_reviews['评价门店'] == store_name]
+                tags = []
+                for col in ['菜品标签', '服务标签', '环境标签']:
+                    if col in df.columns:
+                        t = store_bad[col].dropna().str.split(',').explode().str.strip()
+                        t = filter_negative_tags(t)
+                        tags.extend(t.tolist())
+                tag_counts = pd.Series(tags).value_counts().head(2)
+                return '、'.join(tag_counts.index) if len(tag_counts) > 0 else '-'
+            
+            store_rank['主要问题'] = store_rank['评价门店'].apply(get_store_top_tags)
+            store_rank = store_rank[['排名', '评价门店', '差评数', '差评率', '未回复数', '主要问题']]
+            store_rank.columns = ['排名', '门店名称', '差评数', '差评率(%)', '未回复数', '主要问题标签']
+            
+            def highlight_high_bad_rate(row):
+                if row['差评率(%)'] > 20:
+                    return ['background-color: rgba(239, 68, 68, 0.15); color: #F1F5F9;'] * len(row)
+                return [''] * len(row)
+            
+            styled_store = store_rank.style.apply(highlight_high_bad_rate, axis=1).format({'差评率(%)': '{:.1f}', '差评数': '{:,}', '未回复数': '{:,}'})
+            st.dataframe(styled_store, use_container_width=True)
+            
+            if (store_rank['差评率(%)'] > 20).any():
+                high_risk_count = (store_rank['差评率(%)'] > 20).sum()
+                st.markdown(f'<div style="margin-top: 0.5rem; font-size: 13px; color: #EF4444;">⚠️ 有 {high_risk_count} 家门店差评率超过20%，建议优先重点共识整改</div>', unsafe_allow_html=True)
         
         st.markdown("""
-        <div class="section-header">
+        <div class="section-header" style="position: relative;">
             <span class="section-icon">📋</span>
             运营整改建议
         </div>
         """, unsafe_allow_html=True)
+        st.caption('严重程度 = 出现频次 × (3 - 平均星级)。出现频次越高、平均星级越低，严重程度越高。')
         
         issue_list = []
         
@@ -1192,55 +1168,4 @@ if uploaded_file is not None:
         st.info("请确保上传的Excel文件包含必要的列：评价时间、评价ID、省份、城市、评价门店、星级分、口味分、环境分、服务分、回复状态")
 
 else:
-    st.markdown("""
-    <div class="upload-box">
-        <div style="font-size: 48px; margin-bottom: 1rem;">📤</div>
-        <div style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem;">上传Excel评价数据</div>
-        <div style="font-size: 14px; color: var(--text-secondary);">支持 .xlsx 和 .xls 格式，上传后将自动生成差评分析看板</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="background: var(--bg-card); border-radius: 12px; padding: 2rem; margin-top: 1rem; border: 1px solid var(--border-color);">
-        <h3 style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 1.5rem;">📊 差评运营分析看板</h3>
-        
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-            <div>
-                <h4 style="font-size: 14px; font-weight: 500; color: #EF4444; margin-bottom: 0.5rem;">核心KPI</h4>
-                <ul style="font-size: 13px; color: var(--text-secondary); list-style: none; padding: 0;">
-                    <li style="margin-bottom: 0.25rem;">• 差评率</li>
-                    <li style="margin-bottom: 0.25rem;">• 差评回复率</li>
-                    <li style="margin-bottom: 0.25rem;">• 差评环比变化</li>
-                    <li>• 未回复差评数</li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4 style="font-size: 14px; font-weight: 500; color: #F97316; margin-bottom: 0.5rem;">问题诊断</h4>
-                <ul style="font-size: 13px; color: var(--text-secondary); list-style: none; padding: 0;">
-                    <li style="margin-bottom: 0.25rem;">• 差评星级分布</li>
-                    <li style="margin-bottom: 0.25rem;">• 差评各项评分</li>
-                    <li style="margin-bottom: 0.25rem;">• 差评标签分析（过滤好评）</li>
-                    <li>• 差评关键词分析</li>
-                </ul>
-            </div>
-            
-            <div>
-                <h4 style="font-size: 14px; font-weight: 500; color: #F59E0B; margin-bottom: 0.5rem;">运营整改</h4>
-                <ul style="font-size: 13px; color: var(--text-secondary); list-style: none; padding: 0;">
-                    <li style="margin-bottom: 0.25rem;">• 差评地域分布</li>
-                    <li style="margin-bottom: 0.25rem;">• 未回复差评预警</li>
-                    <li style="margin-bottom: 0.25rem;">• 时间趋势分析</li>
-                    <li>• 智能整改建议</li>
-                </ul>
-            </div>
-        </div>
-        
-        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-            <h4 style="font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 0.5rem;">📌 核心目的</h4>
-            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-                通过数据化分析，精准定位差评原因，与门店共识整改方向，建立持续改进闭环，最终降低差评率、提升用户满意度。
-            </p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.info("👆 请点击上方上传区域选择 Excel 文件，或直接将文件拖拽到上传框内")
